@@ -12,7 +12,7 @@ class Driver:
         self.driver = self.open_browser()
         self.driver.implicitly_wait(20)
 
-    # 打开browser
+    # 打开浏览器
     def open_browser(self):
         res = bit_api.openBrowser(self.browser_id)
         driver_path = res['data']['driver']
@@ -25,8 +25,13 @@ class Driver:
         chrome_service = Service(driver_path)
         return webdriver.Chrome(service=chrome_service, options=chrome_options)
 
+    # 退出浏览器
     def quit_browser(self):
         bit_api.closeBrowser(self.browser_id)
+
+    # 关闭窗口
+    def close_window(self):
+        self.driver.close()
 
     # 获取网页某个元素
     def find_element(self, selector):
@@ -51,6 +56,11 @@ class Driver:
         search_box = self.find_element(selector)
         search_box.send_keys(file_path)
 
+    # 鼠标悬停
     def hover(self, selector):
         search_box = self.find_element(selector)
         ActionChains(self.driver).move_to_element(search_box).perform()
+
+    # 新建tab
+    def create_tab(self):
+        self.driver.switch_to.new_window('tab')
