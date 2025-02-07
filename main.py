@@ -9,8 +9,8 @@ url = "https://www.amazon.com/Snake-Eye-Tactical-Martial-Throwing/dp/B07DP5PCZ6"
 def iter_windows(ws):
     for w in ws:
         browser_window = window.Window(w["id"])
-        # browser_window.browse_by_keyword(keyword)
-        browser_window.browse_direct(url)
+        browser_window.browse_by_keyword(keyword)
+        # browser_window.browse_direct(url)
 
 
 for i in range(100):

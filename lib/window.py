@@ -3,7 +3,7 @@ import time
 
 import requests
 
-from lib import bit_api, tools
+from lib import bit_api, playwright_driver
 
 
 # 根据组ID获取窗口
@@ -20,7 +20,7 @@ def get_window_by_gid(group_id, page, page_size):
 
 class Window:
     def __init__(self, window_id):
-        self.chrome = tools.Driver(window_id)
+        self.chrome = playwright_driver.Driver(window_id)
 
     # 根据关键词浏览
     def browse_by_keyword(self, keyword):
@@ -46,11 +46,18 @@ class Window:
 
     # 根据商品链接浏览
     def browse_direct(self, url):
+        # 新建tab页面
+        self.chrome.create_tab()
         # 打开亚马逊
         self.chrome.open_webpage(url)
         print("打开商品链接")
 
     def close_window(self):
+        # 关闭窗口并退出浏览器
+        self.chrome.close_window()
+        print("关闭页面")
+
+    def quit_browser(self):
         # 关闭窗口并退出浏览器
         self.chrome.close_window()
         time.sleep(1)
