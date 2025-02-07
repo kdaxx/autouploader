@@ -48,9 +48,16 @@ class Driver:
         search_box.type(text)
 
     # 文件路径
-    def upload_txt(self, selector, file_path):
+    def upload_file(self, selector, file_path):
         search_box = self.find_element(selector)
         search_box.set_input_files(file_path)
+
+    # 上传文件
+    def upload_file_with_filechooser(self, selector, file_path):
+        with self.page.expect_file_chooser() as file_info:
+            # 此处不能使用 click, 而是通过dispatch分发事件
+            self.page.locator(selector).dispatch_event("click")
+        file_info.value.set_files(file_path)
 
     # 鼠标悬停
     def hover(self, selector):
