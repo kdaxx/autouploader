@@ -1,31 +1,22 @@
-import time
+from lib import window
 
-from lib import tools
+gid = '2c9bc061948ca74b0194d9dd9c002a18'
+keyword = "Snake Eye Tactical Two ToneFinish Fantasy Desgin NinjaSword Comes with " \
+          "Nylon Sheath(Red)"
+url = "https://www.amazon.com/Snake-Eye-Tactical-Martial-Throwing/dp/B07DP5PCZ6"
 
-chrome = tools.Driver("36974e5a47724407b9453d0904ef0aaf")
-print("打开浏览器")
 
-# 新建tab页面
-chrome.create_tab()
+def iter_windows(ws):
+    for w in ws:
+        browser_window = window.Window(w["id"])
+        # browser_window.browse_by_keyword(keyword)
+        browser_window.browse_direct(url)
 
-# 打开亚马逊
-chrome.open_webpage('https://www.amazon.com/')
-print("打开亚马逊")
 
-# 输入
-chrome.input_text("#twotabsearchtextbox", "Smith & Wesson Extreme Ops Folding Knife")
-print("输入搜索内容")
-time.sleep(1)
-
-# 点击
-chrome.click_btn("#nav-search-submit-button")
-print("点击搜索")
-
-# 点击第一个
-chrome.click_btn("[data-index='3']  [data-cy=image-container]")
-print("点击第一个")
-
-# 关闭窗口并退出浏览器
-chrome.close_window()
-time.sleep(1)
-chrome.quit_browser()
+for i in range(100):
+    windows = window.get_window_by_gid(gid, i, 10)
+    if windows:
+        print(windows)
+        iter_windows(windows["list"])
+    if i == windows["totalNum"] - 1:
+        break
