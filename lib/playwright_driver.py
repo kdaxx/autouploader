@@ -1,3 +1,5 @@
+import time
+
 from playwright.sync_api import sync_playwright
 
 from lib import bit_api
@@ -6,6 +8,7 @@ from lib import bit_api
 class Driver:
     def __init__(self, browser_id):
         self.browser_id = browser_id
+        self.manager = None
         self.ctx = self.open_browser()
         self.page = self.ctx.pages[0]
 
@@ -15,7 +18,9 @@ class Driver:
         # 指纹浏览器的WS调试接口
         ws_address = res['data']['ws']
 
-        playwright = sync_playwright().start()
+        playwright_context_manager = sync_playwright()
+        self.manager = playwright_context_manager
+        playwright = playwright_context_manager.start()
 
         browser = playwright.chromium.connect_over_cdp(ws_address)
         ctx = browser.contexts[0]
@@ -23,6 +28,7 @@ class Driver:
 
     # 退出浏览器
     def quit_browser(self):
+        self.manager.__exit__()
         bit_api.closeBrowser(self.browser_id)
 
     # 关闭窗口
@@ -40,7 +46,10 @@ class Driver:
     # 点击按钮
     def click_btn(self, selector):
         search_btn = self.find_element(selector)
-        search_btn.click()
+        search_btn.dispatch_event("click")
+
+    def is_visible(self, selector):
+        self.page.is_visible(selector)
 
     # 输入内容
     def input_text(self, selector, text):
@@ -56,6 +65,8 @@ class Driver:
     def upload_file_with_filechooser(self, selector, file_path):
         with self.page.expect_file_chooser() as file_info:
             # 此处不能使用 click, 而是通过dispatch分发事件
+            print("trigger filechooser")
+            time.sleep(1)
             self.page.locator(selector).dispatch_event("click")
         file_info.value.set_files(file_path)
 

@@ -57,17 +57,59 @@ def closeBrowser(id):  # 关闭窗口
 def deleteBrowser(id):  # 删除窗口
     json_data = {'id': f'{id}'}
     print(requests.post(f"{url}/browser/delete",
-          data=json.dumps(json_data), headers=headers).json())
+                        data=json.dumps(json_data), headers=headers).json())
 
 
-if __name__ == '__main__':
-    browser_id = createBrowser()
-    openBrowser(browser_id)
+# 根据组ID分页获取窗口
+def get_windows_by_gid(group_id, page, page_size):
+    json_data = {
+        "page": page,
+        "pageSize": page_size,
+        "groupId": group_id
+    }
+    res = requests.post(f"{url}/browser/list",
+                        data=json.dumps(json_data), headers=headers).json()
+    return res['data']
 
-    time.sleep(10)  # 等待10秒自动关闭窗口
 
-    closeBrowser(browser_id)
+def iter_windows(gid):
+    window_list = []
+    page = 0
+    page_size = 10
+    index = 0
+    while True:
+        data = get_windows_by_gid(gid, page, page_size)
+        for window in data["list"]:
+            window_list.append(window)
+            index += 1
+        if data['totalNum'] - 1 <= page:
+            break
+        page += 1
+    return window_list
 
-    time.sleep(10)  # 等待10秒自动删掉窗口
+def get_groups(page, page_size):
+    json_data = {
+        "page": page,
+        "pageSize": page_size,
+        "all": True,
+        "sortDirection": "asc",
+        "sortProperties": "sortNum"
+    }
+    res = requests.post(f"{url}/group/list",
+                        data=json.dumps(json_data), headers=headers).json()
+    return res['data']
 
-    deleteBrowser(browser_id)
+
+def get_group_by_name(group_name):
+    page = 0
+    page_size = 10
+    while True:
+        data = get_groups(page, page_size)
+        for g in data['list']:
+            if g['groupName'] == group_name:
+                return g
+
+        if data['totalNum'] - 1 <= page:
+            break
+        page += 1
+    return None

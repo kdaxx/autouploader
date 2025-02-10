@@ -18,7 +18,7 @@ def get_window_by_gid(group_id, page, page_size):
     return res['data']
 
 
-class Window:
+class AmazonBrowser:
     def __init__(self, window_id):
         self.chrome = playwright_driver.Driver(window_id)
 
@@ -63,3 +63,6 @@ class Window:
         time.sleep(1)
         self.chrome.quit_browser()
         print("quit")
+
+if __name__ == '__main__':
+ pass
