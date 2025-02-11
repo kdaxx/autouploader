@@ -1,9 +1,30 @@
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Semaphore
 
 from lib import playwright_driver
 from lib import bit_api
 from lib import util
+
+
+class Recorder:
+    def __init__(self, path):
+        self.semaphore = Semaphore(1)
+        self.path = path
+
+    def record(self, config):
+        self.semaphore.acquire()
+        util.write_file(self.path, config)
+        self.semaphore.release()
+
+    def read(self):
+        try:
+            self.semaphore.acquire()
+            file = util.read_file(self.path)
+            return file
+        finally:
+            self.semaphore.release()
 
 
 class Uploader:
@@ -121,41 +142,33 @@ def generate_upload_plan(gid, every, dir_path):
 
 
 def publish(config, test=False):
-    upload_plan = util.read_file(config["upload_plan"])
-    for item in upload_plan:
-        if item['is_uploaded']:
-            print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
+    recorder = Recorder(config["upload_plan"])
+    upload_plan = recorder.read()
+    with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
+        for item in upload_plan:
+            executor.submit(exec_upload_task, item, config, upload_plan, test)
+
+
+def exec_upload_task(item, config, upload_plan, test=False):
+    recorder = Recorder(config["upload_plan"])
+    if item['is_uploaded']:
+        print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
+        return
+    uploader = Uploader(item["window"]["id"], config, test=test)
+    print(f"{item["window"]["name"]}正在发布作品")
+    print(f"窗口id: {item["window"]["id"]}")
+    for file in item["upload_files"]:
+        if file["uploaded"]:
+            print(f"{file["file"]}已经发布，跳过")
             continue
-        uploader = Uploader(item["window"]["id"], config, test=test)
-        print(f"{item["window"]["name"]}正在发布作品")
-        print(f"窗口id: {item["window"]["id"]}")
-        for file in item["upload_files"]:
-            if file["uploaded"]:
-                print(f"{file["file"]}已经发布，跳过")
-                continue
-            print(file["file"])
-            uploader.publish(file["file"])
-            file["uploaded"] = True
-            util.write_file(config["upload_plan"], upload_plan)
-        item["is_uploaded"] = True
-        util.write_file(config["upload_plan"], upload_plan)
-        if not test:
-            uploader.quit()
-
-
-def get_config():
-    config = {
-        "video_path": "/Users/laixin/Desktop/publish",
-        "num": 1,
-        "group_name": "13043553889-董公子",
-        "upload_plan": "./upload.json",
-
-        # 定时
-        "schedule": True,
-        "time": "17:00",
-        "date": "2025-02-12",
-    }
-    return config
+        print(file["file"])
+        uploader.publish(file["file"])
+        file["uploaded"] = True
+        recorder.record(upload_plan)
+    item["is_uploaded"] = True
+    recorder.record(upload_plan)
+    if not test:
+        uploader.quit()
 
 
 def create_plan(config):
@@ -172,7 +185,26 @@ def create_plan(config):
         util.write_file(config["upload_plan"], plan)
         print("生成上传计划成功")
     else:
-        print(f"[{os.path.exists(config["upload_plan"])}] 已经生成，跳过")
+        print(f"[{config["upload_plan"]}] 已经生成，跳过")
+
+
+def get_config():
+    config = {
+        "video_path": "/Users/laixin/Desktop/publish",
+        "num": 1,
+        "group_name": "13043553889-董公子",
+        "upload_plan": "./upload.json",
+        "parallel": 2,
+
+        # 定时
+        "schedule": True,
+        "time": "17:00",
+        "date": "2025-02-12",
+
+        # 测试环境
+        "test": True
+    }
+    return config
 
 
 if __name__ == "__main__":
@@ -180,5 +212,5 @@ if __name__ == "__main__":
     print("=========校验发布计划===========")
     create_plan(c)
     print("=========开始发布===========")
-    publish(c, test=True)
+    publish(c, test=c["test"])
     print("=========完成===========")

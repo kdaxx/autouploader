@@ -82,10 +82,11 @@ def iter_windows(gid):
         for window in data["list"]:
             window_list.append(window)
             index += 1
-        if data['totalNum'] - 1 <= page:
+        if data['totalNum'] - 1 <= page * page_size + page_size:
             break
         page += 1
     return window_list
+
 
 def get_groups(page, page_size):
     json_data = {

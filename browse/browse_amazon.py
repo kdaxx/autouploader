@@ -84,11 +84,11 @@ if __name__ == '__main__':
               "Nylon Sheath(Red)"
     url = "https://www.amazon.com/Snake-Eye-Tactical-Martial-Throwing/dp/B07DP5PCZ6"
 
-    index = 0
+    page = 0
     while True:
-        windows = get_window_by_gid(gid, index, 50)
+        windows = get_window_by_gid(gid, page, 50)
         if windows:
             iter_windows(windows["list"], url)
-        if index == windows["totalNum"] - 1:
+        if page * 50 + 50 >= windows["totalNum"] - 1:
             break
-        index += 1
+        page += 1
