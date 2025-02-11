@@ -7,52 +7,80 @@ from lib import util
 
 
 class Uploader:
-    def __init__(self, window_id, test=False):
+    def __init__(self, window_id, config, test=False):
         self.chrome = playwright_driver.Driver(window_id)
         self.test = test
+        self.schedule = config["schedule"]
+        self.config = config
 
     def __wait_for_page(self):
-        while self.chrome.find_element("div.Tooltip__root button[role='button']").count() == 0 \
-                and self.chrome.find_element("button.css-5qkbk").count() == 0:
+        # 有两个版本的界面
+        v1 = {
+            "cargo": "div.Tooltip__root button[role='button']",
+            "upload_btn": ".upload-stage-btn",
+            "success_info": "span[data-icon=CheckCircleFill]",
+            "publish_btn": "button[data-e2e='post_video_button']",
+            "toast_btn": ".TUXTopToast",
+            "schedule_btn": ".schedule-radio-container input[value='schedule']",
+            "schedule_radio": "input.TUXTextInputCore-input",
+        }
+
+        v2 = {
+            "cargo": "button.css-5qkbk",
+            "upload_btn": ".upload-stage-btn",
+            "success_info": ".success-info",
+            "publish_btn": "button[data-e2e='post_video_button']",
+            "toast_btn": ".TUXTopToast",
+            "schedule_btn": ".schedule-radio-container input[value='schedule']",
+            "schedule_radio": "input.TUXTextInputCore-input",
+        }
+        while self.chrome.find_element(v1["cargo"]).count() == 0 \
+                and self.chrome.find_element(v2["cargo"]).count() == 0:
             time.sleep(1)
+        if self.chrome.find_element(v1["cargo"]).count() == 0:
+            return v2
+        else:
+            return v1
 
     def publish(self, file_path):
         print("打开网页")
         self.chrome.open_webpage("https://www.tiktok.com/tiktokstudio/content")
-        self.__wait_for_page()
-        if self.chrome.find_element("div.Tooltip__root button[role='button']").count() == 0:
-            self.chrome.click_btn("button.css-5qkbk")
+        info = self.__wait_for_page()
+        # 上传
+        self.chrome.click_btn(info["cargo"])
 
-            # 等待上传按钮
-            (self.chrome.find_element(".upload-stage-btn")
-             .wait_for(state="visible"))
-            # 文件上传
-            self.chrome.upload_file_with_filechooser("input[type='file']",
-                                                     file_path)
-            # 等待上传进度
-            (self.chrome.find_element(".success-info")
-             .wait_for(state="visible"))
+        # 等待上传按钮
+        while self.chrome.find_element(info["upload_btn"]).count() == 0:
+            time.sleep(2)
+
+        self.chrome.page.wait_for_load_state(state="load")
+
+        # 文件上传
+        self.chrome.upload_file_with_dom("input[type='file']",
+                                         file_path)
+
+        print("等待上传进度")
+        # 等待上传进度
+        while self.chrome.find_element(info["success_info"]).count() == 0:
+            time.sleep(2)
+
+        if self.schedule:
+            # 点击定时发布按钮
+            print(f"定时发布: 将于[{self.config["date"]} {self.config["time"]}]发布该视频")
+            self.chrome.click_btn(info["schedule_btn"])
+            while self.chrome.find_element(info["schedule_radio"]).count() == 0:
+                time.sleep(2)
+            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[0].value"
+                                      f"='{self.config["time"]}'")
+            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[1].value"
+                                      f"='{self.config["date"]}'")
 
             # 发布
-            if not self.test:
-                self.chrome.click_btn("button[data-e2e='post_video_button']")
-        else:
-            self.chrome.click_btn("div.Tooltip__root button[role='button']")
-
-            (self.chrome.find_element(".upload-stage-btn")
-             .wait_for(state="visible"))
-            self.chrome.upload_file_with_filechooser("input[type='file']",
-                                                     file_path)
-
-            (self.chrome.find_element("span[data-icon=CheckCircleFill]")
-             .wait_for(state="visible"))
-
-            if not self.test:
-                self.chrome.click_btn("button[data-e2e='post_video_button']")
-
-        # 等待发布
-        (self.chrome.find_element(".TUXTopToast")
-         .wait_for(state="attached"))
+        if not self.test:
+            self.chrome.click_btn(info["publish_btn"])
+            # 等待发布
+            while self.chrome.find_element(info["toast_btn"]).count() == 0:
+                time.sleep(2)
 
     def quit(self):
         self.chrome.quit_browser()
@@ -92,13 +120,13 @@ def generate_upload_plan(gid, every, dir_path):
     return upload_plan
 
 
-def publish(config_path, test=False):
-    config = util.read_file(config_path)
-    for item in config:
+def publish(config, test=False):
+    upload_plan = util.read_file(config["upload_plan"])
+    for item in upload_plan:
         if item['is_uploaded']:
             print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
             continue
-        uploader = Uploader(item["window"]["id"], test=test)
+        uploader = Uploader(item["window"]["id"], config, test=test)
         print(f"{item["window"]["name"]}正在发布作品")
         print(f"窗口id: {item["window"]["id"]}")
         for file in item["upload_files"]:
@@ -108,29 +136,49 @@ def publish(config_path, test=False):
             print(file["file"])
             uploader.publish(file["file"])
             file["uploaded"] = True
-            util.write_file(config_path, config)
+            util.write_file(config["upload_plan"], upload_plan)
         item["is_uploaded"] = True
-        util.write_file(config_path, config)
-        uploader.quit()
+        util.write_file(config["upload_plan"], upload_plan)
+        if not test:
+            uploader.quit()
+
+
+def get_config():
+    config = {
+        "video_path": "/Users/laixin/Desktop/publish",
+        "num": 1,
+        "group_name": "13043553889-董公子",
+        "upload_plan": "./upload.json",
+
+        # 定时
+        "schedule": True,
+        "time": "17:00",
+        "date": "2025-02-12",
+    }
+    return config
+
+
+def create_plan(config):
+    if not os.path.exists(config["upload_plan"]):
+        print("正在获取窗口")
+        group = bit_api.get_group_by_name(config["group_name"])
+        if group is None:
+            print(f"[{config["group_name"]}]组不存在")
+            exit(1)
+        group_id = group["id"]
+
+        print("正在生成上传计划")
+        plan = generate_upload_plan(group_id, config["num"], config["video_path"])
+        util.write_file(config["upload_plan"], plan)
+        print("生成上传计划成功")
+    else:
+        print(f"[{os.path.exists(config["upload_plan"])}] 已经生成，跳过")
 
 
 if __name__ == "__main__":
-    upload_dir = "/Users/laixin/Desktop/publish"
-    num = 1
-    group_name = "13043553889-董公子"
-
-    group = bit_api.get_group_by_name(group_name)
-    if group is None:
-        print(f"[{group_name}]组不存在")
-        exit(1)
-    group_id = group["id"]
-    # 生成上传计划
-    config_json = "./config.json"
-    if not os.path.exists(config_json):
-        print("正在生成上传计划")
-        plan = generate_upload_plan(group_id, num, upload_dir)
-        util.write_file(config_json, plan)
-        print("生成上传计划成功")
-
+    c = get_config()
+    print("=========校验发布计划===========")
+    create_plan(c)
     print("=========开始发布===========")
-    publish(config_json, test=False)
+    publish(c, test=True)
+    print("=========完成===========")

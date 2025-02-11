@@ -48,6 +48,9 @@ class Driver:
         search_btn = self.find_element(selector)
         search_btn.dispatch_event("click")
 
+    def set_check(self, selector):
+        self.find_element(selector).set_checked(checked=True)
+
     def is_visible(self, selector):
         self.page.is_visible(selector)
 
@@ -69,6 +72,26 @@ class Driver:
             time.sleep(1)
             self.page.locator(selector).dispatch_event("click")
         file_info.value.set_files(file_path)
+
+    def upload_file_with_dom(self, selector, file_path):
+        # 准备上传文件
+        print("正在上传文件")
+        cdp_session = self.page.context.new_cdp_session(self.page)
+        file_input_handle = self.page.query_selector(selector)
+        if not file_input_handle:
+            print("File input element not found!")
+            return False
+
+        dom_snapshot = cdp_session.send("DOM.getDocument")
+        node_id = cdp_session.send("DOM.querySelector", {
+            "nodeId": dom_snapshot["root"]["nodeId"],
+            "selector": selector
+        })
+
+        cdp_session.send("DOM.setFileInputFiles", {
+            "nodeId": node_id["nodeId"],
+            "files": [file_path]
+        })
 
     # 鼠标悬停
     def hover(self, selector):
