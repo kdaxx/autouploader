@@ -176,8 +176,7 @@ def exec_upload_task(item, config, upload_plan, recorder, test=False):
         recorder.record(upload_plan)
     item["is_uploaded"] = True
     recorder.record(upload_plan)
-    if not test:
-        uploader.quit()
+    uploader.quit()
 
 
 def create_plan(config):
