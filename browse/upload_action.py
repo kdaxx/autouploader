@@ -157,11 +157,10 @@ def publish(config, test=False):
     upload_plan = recorder.read()
     with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
         for item in upload_plan:
-            executor.submit(exec_upload_task, item, config, upload_plan, test)
+            executor.submit(exec_upload_task, item, config, upload_plan, recorder, test)
 
 
-def exec_upload_task(item, config, upload_plan, test=False):
-    recorder = Recorder(config["upload_plan"])
+def exec_upload_task(item, config, upload_plan, recorder, test=False):
     if item['is_uploaded']:
         print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
         return
