@@ -74,8 +74,6 @@ class Driver:
         file_info.value.set_files(file_path)
 
     def upload_file_with_dom(self, selector, file_path):
-        # 准备上传文件
-        print("正在上传文件")
         cdp_session = self.page.context.new_cdp_session(self.page)
         file_input_handle = self.page.query_selector(selector)
         if not file_input_handle:

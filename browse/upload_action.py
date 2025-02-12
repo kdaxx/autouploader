@@ -1,7 +1,7 @@
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import Semaphore
 
 from lib import playwright_driver
 from lib import bit_api
@@ -10,21 +10,21 @@ from lib import util
 
 class Recorder:
     def __init__(self, path):
-        self.semaphore = Semaphore(1)
+        self.lock = threading.Lock()
         self.path = path
 
     def record(self, config):
-        self.semaphore.acquire()
+        self.lock.acquire()
         util.write_file(self.path, config)
-        self.semaphore.release()
+        self.lock.release()
 
     def read(self):
         try:
-            self.semaphore.acquire()
+            self.lock.acquire()
             file = util.read_file(self.path)
             return file
         finally:
-            self.semaphore.release()
+            self.lock.release()
 
 
 class Uploader:
@@ -39,6 +39,7 @@ class Uploader:
         v1 = {
             "cargo": "div.Tooltip__root button[role='button']",
             "upload_btn": ".upload-stage-btn",
+            "file_input": "input[type='file']",
             "success_info": "span[data-icon=CheckCircleFill]",
             "publish_btn": "button[data-e2e='post_video_button']",
             "toast_btn": ".TUXTopToast",
@@ -49,6 +50,7 @@ class Uploader:
         v2 = {
             "cargo": "button.css-5qkbk",
             "upload_btn": ".upload-stage-btn",
+            "file_input": "input[type='file']",
             "success_info": ".success-info",
             "publish_btn": "button[data-e2e='post_video_button']",
             "toast_btn": ".TUXTopToast",
@@ -70,14 +72,23 @@ class Uploader:
         # 上传
         self.chrome.click_btn(info["cargo"])
 
+        self.chrome.page.wait_for_load_state(state="load")
+
         # 等待上传按钮
         while self.chrome.find_element(info["upload_btn"]).count() == 0:
             time.sleep(2)
 
+        # 等待文件表单
+        while self.chrome.find_element(info["file_input"]).count() == 0:
+            time.sleep(2)
+
         self.chrome.page.wait_for_load_state(state="load")
 
+        time.sleep(1)
+        # 准备上传文件
+        print(f"上传{file_path}")
         # 文件上传
-        self.chrome.upload_file_with_dom("input[type='file']",
+        self.chrome.upload_file_with_dom(info["file_input"],
                                          file_path)
 
         print("等待上传进度")
@@ -156,12 +167,11 @@ def exec_upload_task(item, config, upload_plan, test=False):
         return
     uploader = Uploader(item["window"]["id"], config, test=test)
     print(f"{item["window"]["name"]}正在发布作品")
-    print(f"窗口id: {item["window"]["id"]}")
     for file in item["upload_files"]:
         if file["uploaded"]:
             print(f"{file["file"]}已经发布，跳过")
             continue
-        print(file["file"])
+        print(f"{item["window"]["name"]}正在发布: {file["file"]}")
         uploader.publish(file["file"])
         file["uploaded"] = True
         recorder.record(upload_plan)
