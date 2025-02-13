@@ -28,8 +28,9 @@ class Recorder:
 
 
 class Uploader:
-    def __init__(self, window_id, config, test=False):
-        self.chrome = playwright_driver.Driver(window_id)
+    def __init__(self, window, config, test=False):
+        self.chrome = playwright_driver.Driver(window["id"])
+        self.window = window
         self.test = test
         self.schedule = config["schedule"]
         self.config = config
@@ -93,8 +94,11 @@ class Uploader:
 
         print("等待上传进度")
         # 等待上传进度
+        index = 1
         while self.chrome.find_element(info["success_info"]).count() == 0:
             time.sleep(2)
+            print(f"等待[{self.window['name']}]上传[{file_path}], 已等待{index * 2}s")
+            index += 1
 
         if self.schedule:
             # 点击定时发布按钮
@@ -113,6 +117,7 @@ class Uploader:
             # 等待发布
             while self.chrome.find_element(info["toast_btn"]).count() == 0:
                 time.sleep(2)
+        print(f"[{self.window['name']}]已上传[{file_path}]")
 
     def quit(self):
         self.chrome.quit_browser()
@@ -164,7 +169,7 @@ def exec_upload_task(item, config, upload_plan, recorder, test=False):
     if item['is_uploaded']:
         print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
         return
-    uploader = Uploader(item["window"]["id"], config, test=test)
+    uploader = Uploader(item["window"], config, test=test)
     print(f"{item["window"]["name"]}正在发布作品")
     for file in item["upload_files"]:
         if file["uploaded"]:
