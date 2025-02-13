@@ -2,6 +2,7 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 from lib import playwright_driver
 from lib import bit_api
@@ -106,16 +107,66 @@ class Uploader:
             self.chrome.click_btn(info["schedule_btn"])
             while self.chrome.find_element(info["schedule_radio"]).count() == 0:
                 time.sleep(2)
-            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[0].value"
-                                      f"='{self.config["time"]}'")
-            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[0].setAttribute("
-                                      f"'value','{self.config["time"]}')")
-            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[1].value"
-                                      f"='{self.config["date"]}'")
-            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[1].setAttribute("
-                                      f"'value','{self.config["date"]}')")
 
-            # 发布
+            target_datetime = time.strptime(self.config["datetime"], "%Y-%m-%d %H:%M")
+
+            dt = self.chrome.page.query_selector_all("input.TUXTextInputCore-input")
+            time_picker = dt[0]
+            date_picker = dt[1]
+            hour = target_datetime.tm_hour
+            minute = target_datetime.tm_min
+
+            # 时间选择
+            print("正在选择时间")
+            time_picker.dispatch_event("click")
+            while self.chrome.find_element(".tiktok-timepicker-left").count() == 0:
+                time.sleep(2)
+
+            for h in self.chrome.page.query_selector_all(".tiktok-timepicker-left"):
+                if int(h.inner_text()) == hour:
+                    h.dispatch_event("click")
+                    break
+
+            for h in self.chrome.page.query_selector_all(".tiktok-timepicker-right"):
+                if int(h.inner_text()) == minute:
+                    h.dispatch_event("click")
+                    break
+
+            time.sleep(1)
+            time_picker.dispatch_event("click")
+
+            # 日期
+            print("正在选择日期")
+            date_picker.dispatch_event("click")
+
+            n = time.strptime(date_picker.get_attribute("value"), "%Y-%m-%d")
+            diff = util.months_diff(datetime(n.tm_year, n.tm_mon, n.tm_mday),
+                                    datetime(target_datetime.tm_year, target_datetime.tm_mon, target_datetime.tm_mday))
+            while self.chrome.find_element("span.arrow").count() == 0:
+                time.sleep(2)
+            nx_month = self.chrome.page.query_selector_all("span.arrow")[1]
+            for i in range(diff):
+                nx_month.dispatch_event("click")
+                time.sleep(1)
+            # 等待
+            self.chrome.page.wait_for_load_state(state="load")
+            is_selected = False
+            for d in self.chrome.page.query_selector_all("div.day-span-container span.day.valid"):
+                if int(d.inner_text()) == target_datetime.tm_mday:
+                    is_selected = True
+                    d.dispatch_event("click")
+                    break
+
+            time.sleep(1)
+
+            if not is_selected:
+                print("【警告】日期无法被选中，未避免发布错误，当前不会发布任何视频")
+                return
+
+            # 等待
+            self.chrome.page.wait_for_load_state(state="load")
+
+        # 发布
         if not self.test:
             self.chrome.click_btn(info["publish_btn"])
             # 等待发布
@@ -233,8 +284,7 @@ def get_config():
             # 定时： True为定时，False为立即发布
             "schedule": True,
             # 上传时间
-            "time": "10:00",
-            "date": "2025-02-12",
+            "datetime": "2025-02-14 12:30",
 
             # 测试环境
             "test": True
@@ -246,6 +296,10 @@ def get_config():
 if __name__ == "__main__":
     print("=========读取配置===========")
     c = get_config()
+    td = time.strptime(c["datetime"], "%Y-%m-%d %H:%M")
+    if td.tm_min % 5 != 0:
+        print("发布时间[datetime]的分钟数必须是5的倍数")
+        exit(1)
     print("=========校验发布计划===========")
     create_plan(c)
     print("=========开始发布===========")
