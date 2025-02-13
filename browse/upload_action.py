@@ -67,7 +67,7 @@ class Uploader:
             return v1
 
     def publish(self, file_path):
-        print("打开网页")
+        print(f"[{self.window['name']}]正在打开作品发布页面")
         self.chrome.open_webpage("https://www.tiktok.com/tiktokstudio/content")
         info = self.__wait_for_page()
         # 上传
@@ -87,12 +87,12 @@ class Uploader:
 
         time.sleep(1)
         # 准备上传文件
-        print(f"上传{file_path}")
+        print(f"[{file_path}]提交上传")
         # 文件上传
         self.chrome.upload_file_with_dom(info["file_input"],
                                          file_path)
 
-        print("等待上传进度")
+        print("提交成功, 等待上传进度")
         # 等待上传进度
         index = 1
         while self.chrome.find_element(info["success_info"]).count() == 0:
@@ -185,7 +185,7 @@ def exec_upload_task(item, config, upload_plan, recorder, test=False):
         recorder.record(upload_plan)
     item["is_uploaded"] = True
     recorder.record(upload_plan)
-    # uploader.quit()
+    uploader.quit()
 
 
 def create_plan(config):
@@ -206,25 +206,45 @@ def create_plan(config):
 
 
 def get_config():
-    config = {
-        "video_path": "/Users/laixin/Desktop/publish",
-        "num": 1,
-        "group_name": "13043553889-董公子",
-        "upload_plan": "./upload.json",
-        "parallel": 2,
+    config = None
+    config_path = "./config.json"
+    if os.path.exists(config_path):
+        print(f"使用[{config_path}]中的程序配置文件")
+        return util.read_file(config_path)
+    # 默认配置
+    if config is None:
+        print("使用默认程序配置文件")
+        config = {
+            # 作品目录路径
+            "video_path": r"/Users/laixin/Desktop/publish",
 
-        # 定时
-        "schedule": True,
-        "time": "09:00",
-        "date": "2025-02-12",
+            # 一个窗口发布的作品数
+            "num": 1,
 
-        # 测试环境
-        "test": True
-    }
+            # 组名称
+            "group_name": "13043553889-董公子",
+
+            # 上传预览文件
+            "upload_plan": "./upload_plan.json",
+
+            # 同时启动的窗口数量
+            "parallel": 1,
+
+            # 定时： True为定时，False为立即发布
+            "schedule": True,
+            # 上传时间
+            "time": "10:00",
+            "date": "2025-02-12",
+
+            # 测试环境
+            "test": True
+        }
+        util.write_file(config_path, config)
     return config
 
 
 if __name__ == "__main__":
+    print("=========读取配置===========")
     c = get_config()
     print("=========校验发布计划===========")
     create_plan(c)

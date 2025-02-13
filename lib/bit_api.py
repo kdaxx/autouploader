@@ -1,6 +1,5 @@
 import requests
 import json
-import time
 
 # 官方文档地址
 # https://doc2.bitbrowser.cn/jiekou/ben-di-fu-wu-zhi-nan.html
@@ -69,7 +68,12 @@ def get_windows_by_gid(group_id, page, page_size):
     }
     res = requests.post(f"{url}/browser/list",
                         data=json.dumps(json_data), headers=headers).json()
-    return res['data']
+
+    if 'data' not in dict(res).keys():
+        print("程序无法获取指纹浏览器数据")
+        print(res)
+        exit(1)
+    return res["data"]
 
 
 def iter_windows(gid):

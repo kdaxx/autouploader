@@ -10,7 +10,7 @@ class Driver:
         self.browser_id = browser_id
         self.manager = None
         self.ctx = self.open_browser()
-        self.page = self.ctx.pages[0]
+        self.page = self.ctx.new_page()
 
     # 打开浏览器
     def open_browser(self):
@@ -28,6 +28,7 @@ class Driver:
 
     # 退出浏览器
     def quit_browser(self):
+        self.close_window()
         self.manager.__exit__()
         bit_api.closeBrowser(self.browser_id)
 
