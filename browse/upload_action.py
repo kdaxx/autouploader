@@ -103,7 +103,7 @@ class Uploader:
 
         if self.schedule:
             # 点击定时发布按钮
-            print(f"定时发布: 将于[{self.config["date"]} {self.config["time"]}]发布该视频")
+            print(f"定时发布: 将于[{self.config["datetime"]}]发布该视频")
             self.chrome.click_btn(info["schedule_btn"])
             while self.chrome.find_element(info["schedule_radio"]).count() == 0:
                 time.sleep(2)
