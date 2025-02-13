@@ -108,8 +108,12 @@ class Uploader:
                 time.sleep(2)
             self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[0].value"
                                       f"='{self.config["time"]}'")
+            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[0].setAttribute("
+                                      f"'value','{self.config["time"]}')")
             self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[1].value"
                                       f"='{self.config["date"]}'")
+            self.chrome.page.evaluate(f"document.querySelectorAll('input.TUXTextInputCore-input')[1].setAttribute("
+                                      f"'value','{self.config["date"]}')")
 
             # 发布
         if not self.test:
@@ -181,7 +185,7 @@ def exec_upload_task(item, config, upload_plan, recorder, test=False):
         recorder.record(upload_plan)
     item["is_uploaded"] = True
     recorder.record(upload_plan)
-    uploader.quit()
+    # uploader.quit()
 
 
 def create_plan(config):
@@ -211,7 +215,7 @@ def get_config():
 
         # 定时
         "schedule": True,
-        "time": "17:00",
+        "time": "09:00",
         "date": "2025-02-12",
 
         # 测试环境
