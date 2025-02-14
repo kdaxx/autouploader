@@ -51,7 +51,7 @@ class Uploader:
         }
 
         v2 = {
-            "cargo": "button.css-5qkbk",
+            "cargo": "button[data-tt=Sidebar_index_TUXButton]",
             "upload_btn": ".upload-stage-btn",
             "file_input": "input[type='file']",
             "success_info": ".success-info",
@@ -146,7 +146,7 @@ class Uploader:
             diff = util.months_diff(datetime(n.tm_year, n.tm_mon, n.tm_mday),
                                     datetime(target_datetime.tm_year, target_datetime.tm_mon, target_datetime.tm_mday))
             if diff is None:
-                print(f"发布日期{self.config["datetime"]}早于当地时间, 请检查, 程序中止")
+                print(f"发布日期{self.config["datetime"]}早于当地时间, 请检查")
                 exit(1)
             while self.chrome.find_element("span.arrow").count() == 0:
                 time.sleep(2)
@@ -198,7 +198,7 @@ def generate_upload_plan(gid, every, dir_path):
             print(f"作品不够,从[{window["name"]}]窗口起无发布计划")
             return upload_plan
         json = {
-            "index": index,
+            "index": index + 1,
             "is_uploaded": False,
             "window": {
                 "id": window["id"],
@@ -246,6 +246,8 @@ def exec_upload_task(item, config, upload_plan, recorder):
         recorder.record(upload_plan)
     except Exception as e:
         traceback.print_exc()
+        print("未知错误，本次操作中止")
+        exit(1)
     finally:
         if dict(config).get("quit_enabled", True):
             uploader.quit()
