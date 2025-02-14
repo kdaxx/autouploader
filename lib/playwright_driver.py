@@ -42,7 +42,7 @@ class Driver:
 
     # 打开网页
     def open_webpage(self, url):
-        self.page.goto(url)
+        self.page.goto(url=url, timeout=0)
 
     # 点击按钮
     def click_btn(self, selector):

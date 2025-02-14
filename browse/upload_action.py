@@ -247,7 +247,6 @@ def exec_upload_task(item, config, upload_plan, recorder):
     except Exception as e:
         traceback.print_exc()
         print("未知错误，本次操作中止")
-        exit(1)
     finally:
         if dict(config).get("quit_enabled", True):
             uploader.quit()

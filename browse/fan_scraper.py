@@ -1,8 +1,9 @@
+import os
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
-from lib import playwright_driver, bit_api
+from lib import playwright_driver, bit_api, util
 
 
 class FanScraper:
@@ -47,7 +48,6 @@ class FanScraper:
         # 关闭两个端口
         self.chrome.close_window()
         self.chrome.close_window()
-        self.quit()
         return {
             "user": user,
             "home": href,
@@ -59,8 +59,10 @@ class FanScraper:
 
 
 def exec_scrap_fan(w):
+    scraper = None
     try:
-        fans = FanScraper(w).get_fans()
+        scraper = FanScraper(w)
+        fans = scraper.get_fans()
         data = {
             "group": config["group_name"],
             "window": w["name"],
@@ -72,15 +74,30 @@ def exec_scrap_fan(w):
             f.write(f'{','.join(vals)}\n')
     except Exception as e:
         traceback.print_exc()
-        print("未知错误，本次操作中止")
-        exit(1)
+        print("出现错误，本次操作中止")
+    finally:
+        scraper.quit()
+
+
+def get_config():
+    cfg = None
+    config_path = "./fan_config.json"
+    if os.path.exists(config_path):
+        print(f"使用[{config_path}]中的程序配置文件")
+        return util.read_file(config_path)
+    # 默认配置
+    if cfg is None:
+        print("使用默认程序配置文件")
+        cfg = {
+            "group_name": "13043553889-董公子",
+            "parallel": 5
+        }
+        util.write_file(config_path, cfg)
+    return cfg
 
 
 if __name__ == "__main__":
-    config = {
-        "group_name": "13043553889-董公子",
-        "parallel": 5
-    }
+    config = get_config()
     file = f"fan-{time.strftime("%Y-%m-%d", time.localtime())}.csv"
     group = bit_api.get_group_by_name(config["group_name"])
     if group is None:
