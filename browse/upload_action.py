@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -29,12 +30,12 @@ class Recorder:
 
 
 class Uploader:
-    def __init__(self, window, config, test=False):
+    def __init__(self, window, config):
         self.chrome = playwright_driver.Driver(window["id"])
         self.window = window
-        self.test = test
-        self.schedule = config["schedule"]
-        self.config = config
+        self.test = dict(config).get("test", True)
+        self.schedule = dict(config).get("schedule", False)
+        self.config = dict(config)
 
     def __wait_for_page(self):
         # 有两个版本的界面
@@ -105,6 +106,8 @@ class Uploader:
             # 点击定时发布按钮
             print(f"定时发布: 将于[{self.config["datetime"]}]发布该视频")
             self.chrome.click_btn(info["schedule_btn"])
+            if self.chrome.find_element(".common-modal-confirm-modal button.TUXButton--primary").count() > 0:
+                self.chrome.click_btn(".common-modal-confirm-modal button.TUXButton--primary")
             while self.chrome.find_element(info["schedule_radio"]).count() == 0:
                 time.sleep(2)
 
@@ -142,6 +145,9 @@ class Uploader:
             n = time.strptime(date_picker.get_attribute("value"), "%Y-%m-%d")
             diff = util.months_diff(datetime(n.tm_year, n.tm_mon, n.tm_mday),
                                     datetime(target_datetime.tm_year, target_datetime.tm_mon, target_datetime.tm_mday))
+            if diff is None:
+                print(f"发布日期{self.config["datetime"]}早于当地时间, 请检查, 程序中止")
+                exit(1)
             while self.chrome.find_element("span.arrow").count() == 0:
                 time.sleep(2)
             nx_month = self.chrome.page.query_selector_all("span.arrow")[1]
@@ -212,31 +218,37 @@ def generate_upload_plan(gid, every, dir_path):
     return upload_plan
 
 
-def publish(config, test=False):
+def publish(config):
     recorder = Recorder(config["upload_plan"])
     upload_plan = recorder.read()
     with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
         for item in upload_plan:
-            executor.submit(exec_upload_task, item, config, upload_plan, recorder, test)
+            executor.submit(exec_upload_task, item, config, upload_plan, recorder)
 
 
-def exec_upload_task(item, config, upload_plan, recorder, test=False):
+def exec_upload_task(item, config, upload_plan, recorder):
     if item['is_uploaded']:
         print(f"窗口:[{item["window"]["name"]}]作品已经发布，跳过")
         return
-    uploader = Uploader(item["window"], config, test=test)
-    print(f"{item["window"]["name"]}正在发布作品")
-    for file in item["upload_files"]:
-        if file["uploaded"]:
-            print(f"{file["file"]}已经发布，跳过")
-            continue
-        print(f"{item["window"]["name"]}正在发布: {file["file"]}")
-        uploader.publish(file["file"])
-        file["uploaded"] = True
+    uploader = None
+    try:
+        uploader = Uploader(item["window"], config)
+        print(f"{item["window"]["name"]}正在发布作品")
+        for file in item["upload_files"]:
+            if file["uploaded"]:
+                print(f"{file["file"]}已经发布，跳过")
+                continue
+            print(f"{item["window"]["name"]}正在发布: {file["file"]}")
+            uploader.publish(file["file"])
+            file["uploaded"] = True
+            recorder.record(upload_plan)
+        item["is_uploaded"] = True
         recorder.record(upload_plan)
-    item["is_uploaded"] = True
-    recorder.record(upload_plan)
-    uploader.quit()
+    except Exception as e:
+        traceback.print_exc()
+    finally:
+        if dict(config).get("quit_enabled", True):
+            uploader.quit()
 
 
 def create_plan(config):
@@ -287,7 +299,10 @@ def get_config():
             "datetime": "2025-02-14 12:30",
 
             # 测试环境
-            "test": True
+            "test": True,
+
+            # 执行完成后是否关闭窗口
+            "quit_enabled": True
         }
         util.write_file(config_path, config)
     return config
@@ -303,5 +318,5 @@ if __name__ == "__main__":
     print("=========校验发布计划===========")
     create_plan(c)
     print("=========开始发布===========")
-    publish(c, test=c["test"])
+    publish(c)
     print("=========完成===========")
