@@ -17,13 +17,13 @@ class Recorder:
 
     def record(self, config):
         self.lock.acquire()
-        util.write_file(self.path, config)
+        util.write_json_file(self.path, config)
         self.lock.release()
 
     def read(self):
         try:
             self.lock.acquire()
-            file = util.read_file(self.path)
+            file = util.read_json_file(self.path)
             return file
         finally:
             self.lock.release()
@@ -263,7 +263,7 @@ def create_plan(config):
 
         print("正在生成上传计划")
         plan = generate_upload_plan(group_id, config["num"], config["video_path"])
-        util.write_file(config["upload_plan"], plan)
+        util.write_json_file(config["upload_plan"], plan)
         print("生成上传计划成功")
     else:
         print(f"[{config["upload_plan"]}] 已经生成，跳过")
@@ -274,7 +274,7 @@ def get_config():
     config_path = "./config.json"
     if os.path.exists(config_path):
         print(f"使用[{config_path}]中的程序配置文件")
-        return util.read_file(config_path)
+        return util.read_json_file(config_path)
     # 默认配置
     if config is None:
         print("使用默认程序配置文件")
@@ -297,7 +297,7 @@ def get_config():
             # 定时： True为定时，False为立即发布
             "schedule": True,
             # 上传时间
-            "datetime": "2025-02-14 12:30",
+            "datetime": "2025-02-16 12:30",
 
             # 测试环境
             "test": True,
@@ -305,7 +305,7 @@ def get_config():
             # 执行完成后是否关闭窗口
             "quit_enabled": True
         }
-        util.write_file(config_path, config)
+        util.write_json_file(config_path, config)
     return config
 
 

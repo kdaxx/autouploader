@@ -58,7 +58,7 @@ class FanScraper:
         self.chrome.quit_browser()
 
 
-def exec_scrap_fan(w):
+def exec_scrap_fan(file_path, w):
     scraper = None
     try:
         scraper = FanScraper(w)
@@ -69,9 +69,7 @@ def exec_scrap_fan(w):
             **fans
         }
         vals = list(data.values())
-
-        with open(file, "a", encoding="utf-8") as f:
-            f.write(f'{','.join(vals)}\n')
+        util.append_file(file_path, f'{','.join(vals)}\n')
     except Exception as e:
         traceback.print_exc()
         print("出现错误，本次操作中止")
@@ -84,7 +82,7 @@ def get_config():
     config_path = "./fan_config.json"
     if os.path.exists(config_path):
         print(f"使用[{config_path}]中的程序配置文件")
-        return util.read_file(config_path)
+        return util.read_json_file(config_path)
     # 默认配置
     if cfg is None:
         print("使用默认程序配置文件")
@@ -92,21 +90,24 @@ def get_config():
             "group_name": "13043553889-董公子",
             "parallel": 5
         }
-        util.write_file(config_path, cfg)
+        util.write_json_file(config_path, cfg)
     return cfg
 
 
 if __name__ == "__main__":
     config = get_config()
-    file = f"fan-{time.strftime("%Y-%m-%d", time.localtime())}.csv"
+
     group = bit_api.get_group_by_name(config["group_name"])
+
+    file = (f"{config["group_name"]}-"
+            f"{time.strftime("%Y-%m-%d", time.localtime())}.csv")
     if group is None:
         print(f"[{config["group_name"]}]组不存在")
         exit(1)
     group_id = group["id"]
     windows = bit_api.iter_windows(group_id)
-    with open(f'{config["group_name"]}-{file}', "w", encoding="utf-8") as f:
-        f.write("组名,窗口名称,账号,主页,粉丝数\n")
+    util.write_file(file,
+                    "组名,窗口名称,账号,主页,粉丝数\n")
     with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
         for window in windows:
-            executor.submit(exec_scrap_fan, window)
+            executor.submit(exec_scrap_fan, file, window)

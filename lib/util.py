@@ -8,14 +8,29 @@ def get_files(path):
         return files
 
 
-def write_file(path, obj):
+def write_json_file(path, obj):
     with open(path, 'w', encoding="utf-8") as f:
         json.dump(obj, f, indent=4, ensure_ascii=False)
 
 
-def read_file(path):
+def read_json_file(path):
     with open(path, 'r', encoding="utf-8") as f:
         return json.load(f)
+
+
+def write_file(path, text):
+    with open(path, 'w', encoding="utf-8") as f:
+        f.write(text)
+
+
+def read_file(path):
+    with open(path, 'r', encoding="utf-8") as f:
+        return f.read()
+
+
+def append_file(path, text):
+    with open(path, 'a', encoding="utf-8") as f:
+        f.write(text)
 
 
 def months_diff(start_date, end_date):
