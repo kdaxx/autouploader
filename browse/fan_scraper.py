@@ -45,8 +45,7 @@ class FanScraper:
         self.chrome.open_webpage(href)
         user = self.chrome.find_element("h1[data-e2e='user-title']").inner_text(timeout=0)
         fan = self.chrome.find_element("strong[data-e2e='followers-count']").inner_text(timeout=0)
-        # 关闭两个端口
-        self.chrome.close_window()
+        # 关闭窗口
         self.chrome.close_window()
         return {
             "user": user,
