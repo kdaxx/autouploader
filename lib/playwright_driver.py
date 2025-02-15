@@ -15,6 +15,10 @@ class Driver:
     # 打开浏览器
     def open_browser(self):
         res = bit_api.openBrowser(self.browser_id)
+        if 'data' not in dict(res).keys():
+            print("程序无法获取指纹浏览器数据")
+            print(res)
+            exit(1)
         # 指纹浏览器的WS调试接口
         ws_address = res['data']['ws']
 
