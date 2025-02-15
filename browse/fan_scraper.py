@@ -105,7 +105,7 @@ if __name__ == "__main__":
         exit(1)
     group_id = group["id"]
     windows = bit_api.iter_windows(group_id)
-    with open(f'{windows['name']}-{file}', "w", encoding="utf-8") as f:
+    with open(f'{group['name']}-{file}', "w", encoding="utf-8") as f:
         f.write("组名,窗口名称,账号,主页,粉丝数\n")
     with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
         for window in windows:
