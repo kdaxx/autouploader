@@ -106,8 +106,16 @@ class Uploader:
             # 点击定时发布按钮
             print(f"定时发布: 将于[{self.config["datetime"]}]发布该视频")
             self.chrome.click_btn(info["schedule_btn"])
-            if self.chrome.find_element(".common-modal-confirm-modal button.TUXButton--primary").count() > 0:
-                self.chrome.click_btn(".common-modal-confirm-modal button.TUXButton--primary")
+            # check confirm
+            cf_btn = [
+                ".common-modal-confirm-modal button.TUXButton--primary",
+                ".common-modal-confirm-modal button.Button__root--type-primary",
+            ]
+            for btn in cf_btn:
+                if self.chrome.find_element(btn).count() > 0:
+                    self.chrome.click_btn(btn)
+                    break
+
             while self.chrome.find_element(info["schedule_radio"]).count() == 0:
                 time.sleep(2)
 
