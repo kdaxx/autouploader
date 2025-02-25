@@ -210,6 +210,7 @@ def generate_upload_plan(gid, every, dir_path):
             "is_uploaded": False,
             "window": {
                 "id": window["id"],
+                "seq": window["seq"],
                 "groupId": window["groupId"],
                 "name": window["name"],
                 "lastIp": window["lastIp"],

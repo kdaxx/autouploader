@@ -3,6 +3,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
+from browse.upload_action import Recorder
 from lib import playwright_driver, bit_api, util
 
 
@@ -57,18 +58,20 @@ class FanScraper:
         self.chrome.quit_browser()
 
 
-def exec_scrap_fan(file_path, w):
+def exec_scrap_fan(file_path, w, rd, plan):
     scraper = None
     try:
-        scraper = FanScraper(w)
+        scraper = FanScraper(w["window"])
         fans = scraper.get_fans()
         data = {
             "group": config["group_name"],
-            "window": w["name"],
+            "window": w["window"]["name"],
             **fans
         }
         vals = list(data.values())
         util.append_file(file_path, f'{','.join(vals)}\n')
+        w["is_scraped"] = True
+        rd.record(plan)
     except Exception as e:
         traceback.print_exc()
         print("出现错误，本次操作中止")
@@ -93,20 +96,51 @@ def get_config():
     return cfg
 
 
+def create_plan(c):
+    scrape_plan = c["scrape_plan"]
+    if not os.path.exists(scrape_plan):
+        group = bit_api.get_group_by_name(config["group_name"])
+        if group is None:
+            print(f"[{config["group_name"]}]组不存在")
+            exit(1)
+        group_id = group["id"]
+        windows = bit_api.iter_windows(group_id)
+        sp = []
+        for index, w in enumerate(windows):
+            sp.append({
+                "index": index + 1,
+                "is_scraped": False,
+                "window": {
+                    "id": w["id"],
+                    "seq": w["seq"],
+                    "groupId": w["groupId"],
+                    "name": w["name"],
+                    "lastIp": w["lastIp"],
+                    "lastCountry": w["lastCountry"],
+                }
+            })
+        util.write_json_file(c["scrape_plan"], sp)
+        print("已生成计划")
+    else:
+        print(f"[{c["scrape_plan"]}] 已经生成，跳过")
+
+
 if __name__ == "__main__":
     config = get_config()
 
-    group = bit_api.get_group_by_name(config["group_name"])
-
     file = (f"{config["group_name"]}-"
             f"{time.strftime("%Y-%m-%d", time.localtime())}.csv")
-    if group is None:
-        print(f"[{config["group_name"]}]组不存在")
-        exit(1)
-    group_id = group["id"]
-    windows = bit_api.iter_windows(group_id)
+    print("=========生成计划===========")
+    create_plan(config)
     util.write_file(file,
                     "组名,窗口名称,账号,主页,粉丝数\n")
+
+    print("=========准备抓取计划===========")
+    recorder = Recorder(config["scrape_plan"])
+    s_windows = recorder.read()
     with ThreadPoolExecutor(max_workers=config["parallel"]) as executor:
-        for window in windows:
-            executor.submit(exec_scrap_fan, file, window)
+        for window in s_windows:
+            if window["is_scraped"]:
+                print(f"[{window["window"]["name"]}]已经抓取粉丝数, 本次跳过")
+                continue
+            executor.submit(exec_scrap_fan, file, window, recorder, s_windows)
