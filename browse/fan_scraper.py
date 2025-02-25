@@ -90,7 +90,8 @@ def get_config():
         print("使用默认程序配置文件")
         cfg = {
             "group_name": "13043553889-董公子",
-            "parallel": 5
+            "parallel": 5,
+            "scrape_plan": "./scrape_plan.json"
         }
         util.write_json_file(config_path, cfg)
     return cfg
