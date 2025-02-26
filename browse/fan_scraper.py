@@ -122,8 +122,6 @@ def create_plan(c):
             })
         util.write_json_file(c["scrape_plan"], sp)
         print("已生成计划")
-        util.write_file(file,
-                        "组名,窗口名称,账号,主页,粉丝数\n")
     else:
         print(f"[{c["scrape_plan"]}] 已经生成，跳过")
 
@@ -135,6 +133,9 @@ if __name__ == "__main__":
             f"{time.strftime("%Y-%m-%d", time.localtime())}.csv")
     print("=========生成计划===========")
     create_plan(config)
+    if not os.path.exists(file):
+        util.write_file(file,
+                        "组名,窗口名称,账号,主页,粉丝数\n")
     print("=========准备抓取计划===========")
     recorder = Recorder(config["scrape_plan"])
     s_windows = recorder.read()
