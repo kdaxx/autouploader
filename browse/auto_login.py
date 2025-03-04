@@ -45,9 +45,10 @@ def get_config():
     if cfg is None:
         print("使用默认程序配置文件")
         cfg = {
-            "group_name": "测试",
-            "parallel": 1,
-            "login_plan": "./login_plan.json"
+            "group_name": "13235929984-测试",
+            "parallel": 3,
+            "login_plan": "./login_plan.json",
+            "excel_path": "C:\\Users\\Admin\\Desktop\\test.xlsx"
         }
         util.write_json_file(config_path, cfg)
     return cfg
@@ -122,7 +123,7 @@ class LoginRobot:
     def has_login(self):
         # 弹出登录成功提示
         return self.chrome.page.locator("div[role='alert']").count() > 0 or \
-    not self.chrome.page.url.startswith(element["login_url"]) # 已经跳转
+            not self.chrome.page.url.startswith(element["login_url"])  # 已经跳转
 
     def is_trigger_verification(self):
         return self.chrome.page.locator(element["captcha_container"]).count() > 0
