@@ -121,9 +121,10 @@ class LoginRobot:
         pass
 
     def has_login(self):
-        # 弹出登录成功提示
-        return self.chrome.page.locator("div[role='alert']").count() > 0 or \
-            not self.chrome.page.url.startswith(element["login_url"])  # 已经跳转
+        # 弹出登录成功提示 or  # 已经跳转
+        return not self.chrome.page.url.startswith(element["login_url"]) or \
+            (self.chrome.page.evaluate("document.readyState") == 'complete' and
+             self.chrome.page.locator("div[role='alert']").count() > 0)
 
     def is_trigger_verification(self):
         return self.chrome.page.locator(element["captcha_container"]).count() > 0
@@ -146,75 +147,56 @@ class LoginRobot:
         if self.chrome.page.locator(element['spin_captcha_slide_btn']).count() == 0:
             # 确认
             print("图片识别验证码")
-            while not self.has_login() and \
-                    self.chrome.page.locator(element['double_click_recognize_img']).count() > 0:
-                captcha_img = self.chrome.page.locator(element['double_click_recognize_img']).screenshot()
-                width, height = Image.open(io.BytesIO(captcha_img)).size
+            captcha_img = self.chrome.page.locator(element['double_click_recognize_img']).screenshot()
+            width, height = Image.open(io.BytesIO(captcha_img)).size
 
-                json_loads = api.get_captcha_position(captcha_img)
-                first = str(str(json_loads["data"]['recognition']).split('|')[0]).split(',')
-                second = str(str(json_loads["data"]['recognition']).split('|')[1]).split(',')
+            json_loads = api.get_captcha_position(captcha_img)
+            if json_loads is None:
+                print("未能识别验证码")
+                return
 
-                imgs = self.chrome.page.locator(element['double_click_recognize_img']).bounding_box(timeout=0)
+            first = str(json_loads.split('|')[0]).split(',')
+            second = str(json_loads.split('|')[1]).split(',')
 
-                time.sleep(1)
-                print("第一次点击")
-                self.click_img(imgs["x"] + float(first[0]) / width * imgs['width'],
-                               imgs["y"] + float(first[1]) / height * imgs['height'])
-                time.sleep(1)
-                print("第二次点击")
-                self.click_img(imgs["x"] + float(second[0]) / width * imgs['width'],
-                               imgs["y"] + float(second[1]) / height * imgs['height'])
+            imgs = self.chrome.page.locator(element['double_click_recognize_img']).bounding_box(timeout=0)
 
-                self.chrome.page.locator("button.TUXButton--default").dispatch_event('click')
+            time.sleep(1)
+            print("第一次点击")
+            self.click_img(imgs["x"] + float(first[0]) / width * imgs['width'],
+                           imgs["y"] + float(first[1]) / height * imgs['height'])
+            time.sleep(1)
+            print("第二次点击")
+            self.click_img(imgs["x"] + float(second[0]) / width * imgs['width'],
+                           imgs["y"] + float(second[1]) / height * imgs['height'])
 
-                # 等待网页跳转或触发验证码
-                wait_secs = 0
-                while not self.has_login() and \
-                        self.chrome.page.locator(element['double_click_recognize_img']).count() == 0 and \
-                        self.chrome.page.locator(element['error_tip']).count() == 0:
-                    time.sleep(2)
-                    wait_secs += 2
-                    print(f"等待网页跳转或验证码已等待{wait_secs}秒")
-                    self.chrome.page.wait_for_load_state(timeout=0, state="load")
+            self.chrome.page.locator("button.TUXButton--default").dispatch_event('click')
+
         else:
             # 旋转验证码
             print("旋转验证码")
-            times = 0
-            while not self.has_login() and \
-                    self.chrome.page.locator(element['spin_captcha_slide_btn']).count() > 0:
-                times = times + 1
-                print(f"第{times}次识别")
-                # 获取图片
-                img = "div.cap-justify-center img"
-                while self.chrome.page.locator(img).count() == 0:
+            # 获取图片
+            img = "div.cap-justify-center img"
+            while self.chrome.page.locator(img).count() == 0:
+                time.sleep(1)
+            img = self.chrome.page.query_selector_all(img)[0].screenshot()
+            captcha_rotation = api.get_single_spin_captcha(img)
+            if captcha_rotation is None:
+                print("本次验证码无法识别")
+                return
+
+            move_distance = (captcha_rotation / 180 * 284)
+            drag_box = self.chrome.page.locator(element['spin_captcha_slide_btn']).bounding_box(timeout=0)
+            self.chrome.page.mouse.move(drag_box["x"] + drag_box["width"] / 2,
+                                        drag_box["y"] + drag_box["height"] / 2)
+            self.chrome.page.mouse.down()
+            location_x = drag_box["x"]
+            base = 34
+            to_spin = move_distance + base
+            for i in range(base, math.ceil(to_spin)):
+                if i > to_spin - 3:
                     time.sleep(1)
-                img = self.chrome.page.query_selector_all(img)[0].screenshot()
-                captcha_rotation = api.get_single_spin_captcha(img)
-
-                move_distance = (captcha_rotation / 180 * 284)
-                drag_box = self.chrome.page.locator(element['spin_captcha_slide_btn']).bounding_box(timeout=0)
-                self.chrome.page.mouse.move(drag_box["x"] + drag_box["width"] / 2,
-                                            drag_box["y"] + drag_box["height"] / 2)
-                self.chrome.page.mouse.down()
-                location_x = drag_box["x"]
-                base = 34
-                to_spin = move_distance + base
-                for i in range(base, math.ceil(to_spin)):
-                    if i > to_spin - 3:
-                        time.sleep(1)
-                    self.chrome.page.mouse.move(location_x + i, drag_box["y"])
-                self.chrome.page.mouse.up()
-
-                # 等待网页跳转或触发验证码
-                wait_secs = 0
-                while not self.has_login() and \
-                        self.chrome.page.locator(element['spin_captcha_slide_btn']).count() == 0 and \
-                        self.chrome.page.locator(element['error_tip']).count() == 0:
-                    time.sleep(2)
-                    wait_secs += 2
-                    print(f"等待网页跳转或验证码已等待{wait_secs}秒")
-                    self.chrome.page.wait_for_load_state(timeout=0, state="load")
+                self.chrome.page.mouse.move(location_x + i, drag_box["y"])
+            self.chrome.page.mouse.up()
 
     def do_login(self, account):
         print(f"[{self.window['name']}]正在打开主页页面")
@@ -231,27 +213,31 @@ class LoginRobot:
         self.chrome.page.locator("input[type='password']").fill(account["password"])
         self.chrome.page.locator(element['login_btn']).dispatch_event("click")
         self.chrome.page.wait_for_load_state(timeout=0, state="load")
-        # 等待网页跳转或触发验证码
+        # 输入账号密码后，等待网页跳转或触发验证码
         wait_secs = 0
-        while not self.has_login() and \
-                self.chrome.page.locator(element['captcha_container']).count() == 0 and \
-                self.chrome.page.locator(element['error_tip']).count() == 0:
+        while True:
+            self.chrome.page.wait_for_load_state(timeout=0, state="load")
+            # 已经登录
+            if self.has_login():
+                break
+
+            # 触发验证码
+            if self.chrome.page.evaluate("document.readyState") == 'complete' and \
+                    self.chrome.page.locator(element['captcha_container']).count() > 0:
+                self.pass_verification()
+
+            # 触发登录限制
+            if self.chrome.page.evaluate("document.readyState") == 'complete' and \
+                    self.chrome.page.locator(element['error_tip']).count() > 0:
+                print(f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}")
+                return {
+                    "success": False,
+                    "message": f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}"
+                }
+
             time.sleep(2)
             wait_secs += 2
             print(f"等待网页跳转或验证码已等待{wait_secs}秒")
-            self.chrome.page.wait_for_load_state(timeout=0, state="load")
-
-        # 是否触发验证码
-        if self.is_trigger_verification():
-            self.chrome.page.wait_for_load_state(timeout=0, state="load")
-            self.pass_verification()
-
-        if self.is_error():
-            print(f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}")
-            return {
-                "success": False,
-                "message": f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}"
-            }
 
         print("登录成功")
         return {

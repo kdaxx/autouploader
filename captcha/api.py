@@ -21,10 +21,15 @@ def get_captcha_position(img_bytes):
         print(f"验证码 API 返回错误:{json.loads(response.text)["code"]}")
         print(f"{json.loads(response.text)["message"]}")
         return
-    dictdata = json.loads(response.text)
-    print(dictdata["data"]["recognition"])
 
-    return dictdata
+    dictdata = json.loads(response.text)
+
+    if dictdata["data"]["recognition"] == 'error':
+        print(f"验证码未识别成功")
+        print(dictdata["data"]["recognition"])
+        return
+    print(dictdata["data"]["recognition"])
+    return str(dictdata["data"]["recognition"])
 
 
 # get_captcha_position(open('double1.png', 'rb').read())
@@ -48,11 +53,18 @@ def get_spin_captcha(outer, inner):
         print(f"验证码 API 返回错误:{json.loads(response.text)["code"]}")
         print(f"{json.loads(response.text)["message"]}")
         return
+
     dictdata = json.loads(response.text)
 
-    return dictdata
+    if dictdata["data"]["recognition"] == 'error':
+        print(f"验证码未识别成功")
+        print(dictdata["data"]["recognition"])
+        return
+    print(dictdata["data"]["recognition"])
 
-# print(get_spin_captcha(open('spin1.png', 'rb').read(),open('spin1-1.png', 'rb').read()))
+    return dictdata
+if "__main__" == __name__:
+    print(get_spin_captcha(open('doublespin1.png', 'rb').read(),open('doublespin2.png', 'rb').read()))
 # print(get_spin_captcha(open('spin3.png', 'rb').read(),open('spin3-3.png', 'rb').read()))
 
 
@@ -73,9 +85,14 @@ def get_single_spin_captcha(outer):
         print(f"验证码 API 返回错误:{json.loads(response.text)["code"]}")
         print(f"{json.loads(response.text)["message"]}")
         return
-    dictdata = json.loads(response.text)
-    print(dictdata["data"]["recognition"])
 
+    dictdata = json.loads(response.text)
+
+    if dictdata["data"]["recognition"] == 'error':
+        print(f"验证码未识别成功")
+        print(dictdata["data"]["recognition"])
+        return
+    print(dictdata["data"]["recognition"])
     return int(dictdata["data"]["recognition"])
 # #
 # print(get_single_spin_captcha(open('spintest1.png', 'rb').read()))
