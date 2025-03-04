@@ -111,12 +111,7 @@ def create_plan(c):
         print(f"[{c["login_plan"]}] 已经生成，跳过")
 
 
-is_navigation = False
 
-
-def on_frame_navigated(frame):
-    print("触发导航")
-    is_navigation = True
 
 
 class LoginRobot:
@@ -196,10 +191,10 @@ class LoginRobot:
                                         drag_box["y"] + drag_box["height"] / 2)
             self.chrome.page.mouse.down()
             location_x = drag_box["x"]
-            base = 34
+            base = 33
             to_spin = move_distance + base
             for i in range(base, math.ceil(to_spin)):
-                if i > to_spin - 3:
+                if i > to_spin - 2:
                     time.sleep(1)
                 self.chrome.page.mouse.move(location_x + i, drag_box["y"])
             self.chrome.page.mouse.up()
@@ -207,7 +202,6 @@ class LoginRobot:
     def do_login(self, account):
         print(f"[{self.window['name']}]正在打开主页页面")
         self.chrome.open_webpage("https://www.tiktok.com/login/phone-or-email/email")
-        self.chrome.page.on("framenavigated", on_frame_navigated)
         self.chrome.page.wait_for_load_state(timeout=0, state="load")
         if self.has_login():
             print("该账户已经登录")

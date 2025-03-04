@@ -26,7 +26,7 @@ class Driver:
         self.manager = playwright_context_manager
         playwright = playwright_context_manager.start()
 
-        browser = playwright.chromium.connect_over_cdp(ws_address)
+        browser = playwright.chromium.connect_over_cdp(endpoint_url=ws_address,timeout=0)
         ctx = browser.contexts[0]
         return ctx
 
