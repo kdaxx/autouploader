@@ -1,6 +1,7 @@
 import io
 import math
 import os
+import threading
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
@@ -110,6 +111,14 @@ def create_plan(c):
         print(f"[{c["login_plan"]}] 已经生成，跳过")
 
 
+is_navigation = False
+
+
+def on_frame_navigated(frame):
+    print("触发导航")
+    is_navigation = True
+
+
 class LoginRobot:
 
     def __init__(self, window):
@@ -123,8 +132,7 @@ class LoginRobot:
     def has_login(self):
         # 弹出登录成功提示 or  # 已经跳转
         return not self.chrome.page.url.startswith(element["login_url"]) or \
-            (self.chrome.page.evaluate("document.readyState") == 'complete' and
-             self.chrome.page.locator("div[role='alert']").count() > 0)
+            self.chrome.page.locator("div[role='alert']").count() > 0
 
     def is_trigger_verification(self):
         return self.chrome.page.locator(element["captcha_container"]).count() > 0
@@ -132,10 +140,9 @@ class LoginRobot:
     def is_error(self):
         return self.chrome.page.locator(element['error_tip']).count() > 0
 
-    def wait_for_captcha(self):
-        while self.chrome.page.locator(element['spin_captcha_slide_btn']).count() == 0 and \
-                self.chrome.page.locator(element['double_click_recognize_img']).count() == 0:
-            time.sleep(1)
+    def captcha_loaded(self):
+        return self.chrome.page.locator(element['spin_captcha_slide_btn']).count() > 0 or \
+            self.chrome.page.locator(element['double_click_recognize_img']).count() > 0
 
     def click_img(self, x, y):
         self.chrome.page.mouse.move(float(x), float(y))
@@ -143,7 +150,6 @@ class LoginRobot:
         self.chrome.page.mouse.up()
 
     def pass_verification(self):
-        self.wait_for_captcha()
         if self.chrome.page.locator(element['spin_captcha_slide_btn']).count() == 0:
             # 确认
             print("图片识别验证码")
@@ -201,6 +207,7 @@ class LoginRobot:
     def do_login(self, account):
         print(f"[{self.window['name']}]正在打开主页页面")
         self.chrome.open_webpage("https://www.tiktok.com/login/phone-or-email/email")
+        self.chrome.page.on("framenavigated", on_frame_navigated)
         self.chrome.page.wait_for_load_state(timeout=0, state="load")
         if self.has_login():
             print("该账户已经登录")
@@ -215,29 +222,31 @@ class LoginRobot:
         self.chrome.page.wait_for_load_state(timeout=0, state="load")
         # 输入账号密码后，等待网页跳转或触发验证码
         wait_secs = 0
-        while True:
-            self.chrome.page.wait_for_load_state(timeout=0, state="load")
-            # 已经登录
-            if self.has_login():
-                break
+        try:
+            while True:
+                self.chrome.page.wait_for_load_state(timeout=0, state="load")
+                # 已经登录
+                if self.has_login():
+                    break
 
-            # 触发验证码
-            if self.chrome.page.evaluate("document.readyState") == 'complete' and \
-                    self.chrome.page.locator(element['captcha_container']).count() > 0:
-                self.pass_verification()
+                # 触发验证码
+                if self.chrome.page.locator(element['captcha_container']).count() > 0 and \
+                        self.captcha_loaded():
+                    self.pass_verification()
 
-            # 触发登录限制
-            if self.chrome.page.evaluate("document.readyState") == 'complete' and \
-                    self.chrome.page.locator(element['error_tip']).count() > 0:
-                print(f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}")
-                return {
-                    "success": False,
-                    "message": f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}"
-                }
+                # 触发登录限制
+                if self.chrome.page.locator(element['error_tip']).count() > 0:
+                    print(f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}")
+                    return {
+                        "success": False,
+                        "message": f"登录遇到限制:{self.chrome.page.locator(element['error_tip']).inner_text()}"
+                    }
 
-            time.sleep(2)
-            wait_secs += 2
-            print(f"等待网页跳转或验证码已等待{wait_secs}秒")
+                time.sleep(2)
+                wait_secs += 2
+                print(f"等待网页跳转或验证码已等待{wait_secs}秒")
+        except Exception as e:
+            print("登录成功跳转")
 
         print("登录成功")
         return {
