@@ -100,9 +100,9 @@ def get_config():
 def create_plan(c):
     scrape_plan = c["scrape_plan"]
     if not os.path.exists(scrape_plan):
-        group = bit_api.get_group_by_name(config["group_name"])
+        group = bit_api.get_group_by_name(c["group_name"])
         if group is None:
-            print(f"[{config["group_name"]}]组不存在")
+            print(f"[{c["group_name"]}]组不存在")
             exit(1)
         group_id = group["id"]
         windows = bit_api.iter_windows(group_id)

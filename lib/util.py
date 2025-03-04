@@ -22,6 +22,9 @@ def write_file(path, text):
     with open(path, 'w', encoding="utf-8") as f:
         f.write(text)
 
+def write_bytes(path, b):
+    with open(path, 'wb') as f:
+        f.write(b)
 
 def read_file(path):
     with open(path, 'r', encoding="utf-8") as f:
