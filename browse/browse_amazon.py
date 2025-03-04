@@ -51,7 +51,8 @@ class AmazonBrowser:
         # 打开亚马逊
         self.chrome.open_webpage(url)
         print("打开商品链接")
-
+    def randon_browse(self):
+        self.chrome.page.query_selector_all("span.a-list-item")[0].dispatch_event("click")
     def close_window(self):
         # 关闭窗口并退出浏览器
         self.chrome.close_window()
@@ -73,6 +74,7 @@ def iter_windows(ws, url):
         # browser_window.browse_by_keyword(keyword)
         # 根据网址直接浏览
         browser_window.browse_direct(url)
+        browser_window.randon_browse()
         print(f"{w['name']} 浏览完成！")
         browser_window.quit_browser()
 
@@ -82,13 +84,7 @@ if __name__ == '__main__':
     gid = group['id']
     keyword = "Snake Eye Tactical Two ToneFinish Fantasy Desgin NinjaSword Comes with " \
               "Nylon Sheath(Red)"
-    url = "https://www.amazon.com/Snake-Eye-Tactical-Martial-Throwing/dp/B07DP5PCZ6"
+    url = "https://www.amazon.com"
+    windows = bit_api.iter_windows(gid)
+    iter_windows(windows, url)
 
-    page = 0
-    while True:
-        windows = get_window_by_gid(gid, page, 50)
-        if windows:
-            iter_windows(windows["list"], url)
-        if page * 50 + 50 >= windows["totalNum"] - 1:
-            break
-        page += 1
