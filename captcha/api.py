@@ -6,15 +6,7 @@ import base64, requests
 import json
 
 
-def get_captcha_position(img_bytes):
-    api_post_url = "http://www.bingtop.com/ocr/upload/"
-    img64 = base64.b64encode(img_bytes)
-    params = {
-        "username": "%s" % "liangliangliang",
-        "password": "%s" % "Aa13235929984@",
-        "captchaData": img64,
-        "captchaType": 2301
-    }
+def get_recognition(api_post_url, params):
     response = requests.post(api_post_url, data=params)
 
     if json.loads(response.text)["code"] != 0:
@@ -29,7 +21,20 @@ def get_captcha_position(img_bytes):
         print(dictdata["data"]["recognition"])
         return
     print(dictdata["data"]["recognition"])
-    return str(dictdata["data"]["recognition"])
+    return dictdata["data"]["recognition"]
+
+
+def get_captcha_position(img_bytes):
+    api_post_url = "http://www.bingtop.com/ocr/upload/"
+    img64 = base64.b64encode(img_bytes)
+    params = {
+        "username": "%s" % "liangliangliang",
+        "password": "%s" % "Aa13235929984@",
+        "captchaData": img64,
+        "captchaType": 2301
+    }
+
+    return str(get_recognition(api_post_url, params))
 
 
 # get_captcha_position(open('double1.png', 'rb').read())
@@ -44,29 +49,16 @@ def get_spin_captcha(outer, inner):
         "username": "%s" % "liangliangliang",
         "password": "%s" % "Aa13235929984@",
         "captchaData": o_img64,
-        "subCaptchaData ": i_img64,
+        "subCaptchaData": i_img64,
         "captchaType": 1122
     }
-    response = requests.post(api_post_url, data=params)
 
-    if json.loads(response.text)["code"] != 0:
-        print(f"验证码 API 返回错误:{json.loads(response.text)["code"]}")
-        print(f"{json.loads(response.text)["message"]}")
-        return
+    return int(get_recognition(api_post_url, params))
 
-    dictdata = json.loads(response.text)
 
-    if dictdata["data"]["recognition"] == 'error':
-        print(f"验证码未识别成功")
-        print(dictdata["data"]["recognition"])
-        return
-    print(dictdata["data"]["recognition"])
-
-    return dictdata
-if "__main__" == __name__:
-    print(get_spin_captcha(open('doublespin1.png', 'rb').read(),open('doublespin2.png', 'rb').read()))
+# if "__main__" == __name__:
+# print(get_spin_captcha(open('doublespin1.png', 'rb').read(),open('doublespin2.png', 'rb').read()))
 # print(get_spin_captcha(open('spin3.png', 'rb').read(),open('spin3-3.png', 'rb').read()))
-
 
 
 def get_single_spin_captcha(outer):
@@ -79,21 +71,10 @@ def get_single_spin_captcha(outer):
         "captchaData": o_img64,
         "captchaType": 1121
     }
-    response = requests.post(api_post_url, data=params)
 
-    if json.loads(response.text)["code"] != 0:
-        print(f"验证码 API 返回错误:{json.loads(response.text)["code"]}")
-        print(f"{json.loads(response.text)["message"]}")
-        return
+    return int(get_recognition(api_post_url, params))
 
-    dictdata = json.loads(response.text)
 
-    if dictdata["data"]["recognition"] == 'error':
-        print(f"验证码未识别成功")
-        print(dictdata["data"]["recognition"])
-        return
-    print(dictdata["data"]["recognition"])
-    return int(dictdata["data"]["recognition"])
 # #
 # print(get_single_spin_captcha(open('spintest1.png', 'rb').read()))
 # print(get_single_spin_captcha(open('spintest2.jpg', 'rb').read()))
