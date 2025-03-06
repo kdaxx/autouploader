@@ -26,7 +26,7 @@ class Driver:
         self.manager = playwright_context_manager
         playwright = playwright_context_manager.start()
 
-        browser = playwright.chromium.connect_over_cdp(endpoint_url=ws_address,timeout=0)
+        browser = playwright.chromium.connect_over_cdp(endpoint_url=ws_address, timeout=0)
         ctx = browser.contexts[0]
         return ctx
 
@@ -95,6 +95,12 @@ class Driver:
             "nodeId": node_id["nodeId"],
             "files": [file_path]
         })
+
+    def upload_file_with_dom_v2(self, selector, file_path):
+        with self.page.expect_file_chooser() as file_info:
+            # 此处不能使用 click, 而是通过dispatch分发事件
+            self.page.locator(selector).dispatch_event("click")
+        file_info.value.set_files(file_path)
 
     # 鼠标悬停
     def hover(self, selector):

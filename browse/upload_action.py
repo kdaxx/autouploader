@@ -280,7 +280,7 @@ def create_plan(config):
 
 def get_config():
     config = None
-    config_path = "./config.json"
+    config_path = "./upload_action.json"
     if os.path.exists(config_path):
         print(f"使用[{config_path}]中的程序配置文件")
         return util.read_json_file(config_path)
@@ -289,13 +289,13 @@ def get_config():
         print("使用默认程序配置文件")
         config = {
             # 作品目录路径
-            "video_path": r"/Users/laixin/Desktop/publish",
+            "video_path": r"C:\Users\Admin\Desktop\video",
 
             # 一个窗口发布的作品数
             "num": 1,
 
             # 组名称
-            "group_name": "13043553889-董公子",
+            "group_name": "13235929988-1",
 
             # 上传预览文件
             "upload_plan": "./upload_plan.json",
@@ -306,7 +306,7 @@ def get_config():
             # 定时： True为定时，False为立即发布
             "schedule": True,
             # 上传时间
-            "datetime": "2025-02-16 12:30",
+            "datetime": "2025-03-06 12:30",
 
             # 测试环境
             "test": True,
